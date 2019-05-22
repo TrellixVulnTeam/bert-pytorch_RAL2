@@ -42,6 +42,39 @@ from pytorch_pretrained_bert.optimization import BertAdam, WarmupLinearSchedule
 
 logger = logging.getLogger(__name__)
 
+import math
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from torch.autograd import Variable
+import numpy as np
+
+
+class BalanceLoss(nn.Module):
+    def __init__(self):
+        super(BalanceLoss, self).__init__()
+
+    def gaussian(self, x, mean=0.5, variance=0.25):
+        for i, v in enumerate(x.data):
+            x[i] = math.exp(-(v - mean) ** 2 / (2.0 * variance ** 2))
+        return x
+
+    def forward(self, input, target):
+
+        if input.dim() > 2:
+            input = input.view(input.size(0), input.size(1), -1)
+            input = input.transpose(1, 2)
+            input = input.contiguous().view(-1, input.size(2))
+        target = target.view(-1, 1)
+
+        logpt = F.log_softmax(input)
+        logpt = logpt.gather(1, target)
+        logpt = logpt.view(-1)
+        pt = Variable(logpt.data.exp())
+        loss = -1 * (self.gaussian(pt, variance=0.1 * math.exp(1), mean=0.5) - 0.1 * pt) * logpt
+        return loss.mean()
+
+
 
 class InputExample(object):
     """A single training/test example for simple sequence classification."""
@@ -832,7 +865,7 @@ def main():
                 logits = model(input_ids, segment_ids, input_mask, labels=None)
 
                 if output_mode == "classification":
-                    loss_fct = CrossEntropyLoss()
+                    loss_fct = BalanceLoss()
                     loss = loss_fct(logits.view(-1, num_labels), label_ids.view(-1))
                 elif output_mode == "regression":
                     loss_fct = MSELoss()
@@ -918,7 +951,7 @@ def main():
 
             # create eval loss and other metric required by the task
             if output_mode == "classification":
-                loss_fct = CrossEntropyLoss()
+                loss_fct = BalanceLoss()
                 tmp_eval_loss = loss_fct(logits.view(-1, num_labels), label_ids.view(-1))
             elif output_mode == "regression":
                 loss_fct = MSELoss()
@@ -992,7 +1025,7 @@ def main():
                 with torch.no_grad():
                     logits = model(input_ids, segment_ids, input_mask, labels=None)
             
-                loss_fct = CrossEntropyLoss()
+                loss_fct = BalanceLoss()
                 tmp_eval_loss = loss_fct(logits.view(-1, num_labels), label_ids.view(-1))
             
                 eval_loss += tmp_eval_loss.mean().item()
