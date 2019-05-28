@@ -256,9 +256,6 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
             segment_ids = []
             tokens.append("[CLS]")
             segment_ids.append(0)
-            tokens.append("[SEP]")
-            segment_ids.append(0)
-
             for i in range(doc_span.length):
                 split_token_index = doc_span.start + i
                 token_to_orig_map[len(tokens)] = tok_to_orig_index[split_token_index]
@@ -609,7 +606,7 @@ def write_predictions(all_examples, all_features, all_results, n_best_size,
                 all_predictions[example.qas_id] = ""
             else:
                 all_predictions[example.qas_id] = best_non_null_entry.text
-            all_nbest_json[example.qas_id] = nbest_json
+        all_nbest_json[example.qas_id] = nbest_json
 
     with open(output_prediction_file, "w") as writer:
         writer.write(json.dumps(all_predictions, indent=4) + "\n")
