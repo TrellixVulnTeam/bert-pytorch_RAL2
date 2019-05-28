@@ -795,6 +795,7 @@ def main():
         model = DDP(model)
     elif n_gpu > 1:
         model = torch.nn.DataParallel(model)
+        model = model.module
 
     # Prepare optimizer
     if args.do_train:
