@@ -302,7 +302,7 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
                     start_position = 0
                     end_position = 0
                 else:
-                    doc_offset = len(query_tokens) + 2
+                    doc_offset = 1
                     start_position = tok_start_position - doc_start + doc_offset
                     end_position = tok_end_position - doc_start + doc_offset
             if is_training and example.is_impossible:
